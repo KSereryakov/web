@@ -294,16 +294,7 @@
             <div class="info-grid" id="clientInfoGrid"></div>
         </div>
         
-        <!-- Проверка инфраструктуры -->
-        <div class="section" id="infraCheck" style="display:none;">
-            <div class="section-title">🔧 Проверка IP сервера</div>
-            <p class="help-text">
-                Проверяем попадает ли IP VPN сервера (185.125.100.216) в whitelist подсети операторов. 
-                Если IP в whitelist - SNI spoofing не нужен, VPN будет работать напрямую.
-            </p>
-            <div id="infraTests"></div>
-        </div>
-        
+
         <!-- Проверка сети -->
         <div class="section" id="networkCheck" style="display:none;">
             <div class="section-title">🌐 Диагностика блокировок оператора</div>
@@ -408,40 +399,7 @@
             return false;
         }
         
-        function ipToInt(ip) {
-            return ip.split('.').reduce((int, oct) => (int << 8) + parseInt(oct, 10), 0) >>> 0;
-        }
-        
-        function isIPInCIDR(ip, cidr) {
-            const [range, bits] = cidr.split('/');
-            const mask = ~(2 ** (32 - parseInt(bits)) - 1);
-            return (ipToInt(ip) & mask) === (ipToInt(range) & mask);
-        }
-        
-        async function checkServerIPInWhitelist() {
-            try {
-                // Загружаем CIDR подсети
-                const cidrResponse = await fetch('https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt');
-                if (cidrResponse.ok) {
-                    const cidrText = await cidrResponse.text();
-                    const cidrList = cidrText.split('\n').map(c => c.trim()).filter(c => c);
-                    
-                    // Проверяем попадает ли IP сервера в какую-то подсеть
-                    const matchingCIDR = cidrList.find(cidr => isIPInCIDR(SERVER_IP, cidr));
-                    
-                    return {
-                        success: true,
-                        inWhitelist: !!matchingCIDR,
-                        matchingCIDR: matchingCIDR || null,
-                        totalCIDRs: cidrList.length
-                    };
-                }
-            } catch (e) {
-                console.error('Ошибка проверки IP whitelist:', e);
-            }
-            return { success: false };
-        }
-        
+
         function updateProgress(percent) {
             document.getElementById('progressBar').style.width = percent + '%';
         }
@@ -546,27 +504,8 @@
         }
         
         async function checkInfrastructure() {
-            document.getElementById('infraCheck').style.display = 'block';
+            // Пропускаем проверку инфраструктуры - она не нужна
             updateProgress(30);
-            
-            const tests = [];
-            
-            // Проверка IP сервера в whitelist через CIDR подсети
-            const ipCheck = await checkServerIPInWhitelist();
-            if (ipCheck.success) {
-                const infoText = ipCheck.inWhitelist 
-                    ? `✓ IP в подсети ${ipCheck.matchingCIDR} - SNI spoofing НЕ НУЖЕН!` 
-                    : `✗ IP не в whitelist (проверено ${ipCheck.totalCIDRs} подсетей) - нужен SNI spoofing`;
-                
-                tests.push({
-                    name: `IP сервера ${SERVER_IP}`,
-                    success: ipCheck.inWhitelist,
-                    info: infoText
-                });
-            }
-            
-            diagnosticsResults.infraTests = tests;
-            displayTests('infraTests', tests);
         }
         
         async function checkNetworkCapabilities() {
